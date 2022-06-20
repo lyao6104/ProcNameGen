@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "87a795627b08c009f6455bbad1bf7027fcfba79c5968c9fadf003c1749c70b7f"
+            "sha256": "8d9d5ea8ede5431e57ece4b861cb1e03f7515c3d73086ae73b46aad81a003657"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -60,6 +60,14 @@
             ],
             "markers": "platform_system == 'Windows'",
             "version": "==0.4.5"
+        },
+        "isort": {
+            "hashes": [
+                "sha256:6f62d78e2f89b4500b080fe3a81690850cd254227f27f75c3a0c491a1f351ba7",
+                "sha256:e8443a5e7a020e9d7f97f1d7d9cd17c88bcb3bc7e218bf9cf5095fe550be2951"
+            ],
+            "index": "pypi",
+            "version": "==5.10.1"
         },
         "joblib": {
             "hashes": [
