@@ -2,7 +2,8 @@ import json
 import string
 from functools import cached_property
 from random import randint
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+from urllib.request import ProxyBasicAuthHandler
 
 from numpy.random import choice
 
@@ -22,11 +23,16 @@ class Name(object):
 
 class SegmentType(object):
     def __init__(
-        self, name: str, probability: float, segments: List[Tuple[str, float]]
+        self,
+        name: str,
+        probability: float,
+        segments: Dict[str, List[Tuple[str, float]]],
     ) -> None:
         self.name = name
         self.probability = probability
         self.segments = segments
+
+        self.normalize_segment_probabilities()
 
     def to_json(self):
         return json.dumps(
@@ -37,13 +43,36 @@ class SegmentType(object):
             }
         )
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "probability": self.probability,
+            "segments": self.segments,
+        }
+
+    def get_segment(self, current_segment: str) -> str:
+        self.normalize_segment_probabilities()
+        return choice(
+            list(map(lambda segment: segment[0], self.segments[current_segment])),
+            1,
+            p=list(map(lambda segment: segment[1], self.segments[current_segment])),
+        )[0]
+
+    def normalize_segment_probabilities(self):
+        for current_segment in self.segments.keys():
+            segment_probabilities = normalize_sum(
+                list(map(lambda s: s[1], self.segments[current_segment]))
+            )
+            for i in range(0, len(segment_probabilities)):
+                segment_text, _ = self.segments[current_segment][i]
+                self.segments[current_segment][i] = (
+                    segment_text,
+                    segment_probabilities[i],
+                )
+
     @cached_property
     def values(self):
         return list(map(lambda s: s[0], self.segments))
-
-    @cached_property
-    def probabilities(self):
-        return normalize_sum(list(map(lambda s: s[1], self.segments)))
 
 
 class Language(object):
@@ -51,64 +80,125 @@ class Language(object):
         self,
         name: str,
         segment_types: List[SegmentType],
+        openers: Dict[str, float],
         min_segments: int,
         max_segments: int,
     ) -> None:
         self.name = name
         self.segment_types = segment_types
+        self.openers = openers
         self.min_segments = min_segments
         self.max_segments = max_segments
 
-    def to_json(self):
+        self.normalize_segment_type_probabilities()
+        self.normalize_opener_probabilities()
+
+    def to_json(self, pretty: bool = False):
         return json.dumps(
             {
                 "name": self.name,
-                "segmentTypes": list(map(lambda s: s.to_json(), self.segment_types)),
-            }
+                "segmentTypes": list(map(lambda s: s.to_dict(), self.segment_types)),
+                "openers": self.openers,
+                "minSegments": self.min_segments,
+                "maxSegments": self.max_segments,
+            },
+            indent=(2 if pretty else None),
+            sort_keys=pretty,
         )
 
-    def get_name(self):
-        chosen_segments = []
+    def get_name(self) -> Name:
+        chosen_segments = [
+            choice(
+                list(self.openers.keys()),
+                1,
+                list(self.openers.values()),
+            )[0]
+        ]
         num_segments = randint(self.min_segments, self.max_segments)
-        for _ in range(0, num_segments):
+        for _ in range(1, num_segments):
             segment_type = choice(
                 self.segment_types,
                 1,
                 p=self.probabilities,
             )[0]
-            segment = choice(
-                segment_type.values,
-                1,
-                p=segment_type.probabilities,
-            )[0]
+            segment = segment_type.get_segment(
+                chosen_segments[len(chosen_segments) - 1]
+            )
             chosen_segments.append(segment)
         generated_name = Name(chosen_segments)
-        return str(generated_name)
+        return generated_name
+
+    def mark_name(self, name: Name, good: bool) -> None:
+        p_modifier = 1.01 if good else 0.99
+
+        # Modify opener probability
+        self.openers[name.segments[0]] *= p_modifier
+
+        # Modify segment probabilities
+        cur_next_segment_mapping = {}
+        for i in range(0, len(name.segments) - 1):
+            cur_next_segment_mapping[name.segments[i]] = name.segments[i + 1]
+        # Look through segment types to find instances of each segment in the mapping
+        for i in range(0, len(self.segment_types)):
+            for cur_segment in cur_next_segment_mapping.keys():
+                # If current segment is found, find the segment that comes after and adjust probabilities
+                if cur_segment in self.segment_types[i].segments:
+                    for j in range(0, len(self.segment_types[i].segments[cur_segment])):
+                        next_segment, p = self.segment_types[i].segments[cur_segment][j]
+                        if next_segment == cur_next_segment_mapping[cur_segment]:
+                            self.segment_types[i].segments[cur_segment][j] = (
+                                next_segment,
+                                p * p_modifier,
+                            )
+
+        # Normalize probabilities when finished
+        self.normalize_opener_probabilities()
+        self.normalize_segment_type_probabilities()
 
     @cached_property
     def probabilities(self):
         return normalize_sum(list(map(lambda st: st.probability, self.segment_types)))
 
+    def normalize_segment_type_probabilities(self):
+        probabilities = self.probabilities
+        for i in range(0, len(self.segment_types)):
+            self.segment_types[i].probability = probabilities[i]
+
+    def normalize_opener_probabilities(self):
+        total_p = sum(list(self.openers.values()))
+        for opener in self.openers.keys():
+            self.openers[opener] /= total_p
+
     @classmethod
-    def new_language(cls, name: Optional[str]):
+    def language_template(cls, name: Optional[str] = None):
+        openers = {a: 1.0 for a in string.ascii_lowercase}
+        cur_segments = [a for a in string.ascii_lowercase] + [
+            a + b for a in string.ascii_lowercase for b in string.ascii_lowercase
+        ]
+        singles = SegmentType(
+            "singles",
+            1.0,
+            {
+                # Discourage the same letter from appearing twice in a row.
+                s: [(b, 0.5 if s[-1] == b else 1.0) for b in string.ascii_lowercase]
+                for s in cur_segments
+            },
+        )
         doubles = SegmentType(
             "doubles",
             1.0,
-            [
-                (a + b, 1.0)
-                for a in string.ascii_lowercase
-                for b in string.ascii_lowercase
-            ],
-        )
-        triples = SegmentType(
-            "triples",
-            1.0,
-            [
-                (a + b + c, 1.0)
-                for a in string.ascii_lowercase
-                for b in string.ascii_lowercase
-                for c in string.ascii_lowercase
-            ],
+            {
+                # Make sure two letters don't appear in a row
+                s: [
+                    (c + d, 1.0)
+                    for c in string.ascii_lowercase
+                    for d in string.ascii_lowercase
+                    if s[-1] != c and c != d
+                ]
+                for s in cur_segments
+            },
         )
 
-        return Language(name if name else "New Language", [doubles, triples], 2, 4)
+        return Language(
+            name if name else "New Language", [singles, doubles], openers, 2, 4
+        )
