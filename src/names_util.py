@@ -107,6 +107,8 @@ def scan_names(
                     segments[cur_segment].append((next_segment, 1))
 
     segment_type = SegmentType("Base Segment", 1, segments)
+    # Note that average length will just be auto-calculated,
+    # since we only have number of letters here, not segments.
     new_lang = Language(
         language_name,
         [segment_type],

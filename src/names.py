@@ -1,13 +1,13 @@
 import json
 import string
 from functools import cached_property
-from random import randint
+from random import randint, random
 from typing import Dict, List, Optional, Tuple
 from urllib.request import ProxyBasicAuthHandler
 
 from numpy.random import choice
 
-from .util import normalize_sum
+from .util import lerp, normalize_sum
 
 
 class Name(object):
@@ -83,12 +83,14 @@ class Language(object):
         openers: Dict[str, float],
         min_segments: int,
         max_segments: int,
+        avg_segments: Optional[float] = None,
     ) -> None:
         self.name = name
         self.segment_types = segment_types
         self.openers = openers
         self.min_segments = min_segments
         self.max_segments = max_segments
+        self.average_segments = avg_segments or (min_segments + max_segments) / 2
 
         self.normalize_segment_type_probabilities()
         self.normalize_opener_probabilities()
@@ -101,6 +103,7 @@ class Language(object):
                 "openers": self.openers,
                 "minSegments": self.min_segments,
                 "maxSegments": self.max_segments,
+                "averageSegments": self.average_segments,
             },
             indent=(2 if pretty else None),
             sort_keys=pretty,
@@ -108,14 +111,18 @@ class Language(object):
 
     def get_name(self) -> Name:
         chosen_segments = [
+            # The opener
             choice(
                 list(self.openers.keys()),
                 1,
                 list(self.openers.values()),
             )[0]
         ]
-        num_segments = randint(self.min_segments, self.max_segments)
-        for _ in range(1, num_segments):
+        gen_segments = True
+        while gen_segments:
+        # num_segments = randint(self.min_segments, self.max_segments)
+        # for _ in range(1, num_segments):
+            # Choose the next segment and add it to the list
             segment_type = choice(
                 self.segment_types,
                 1,
@@ -125,11 +132,36 @@ class Language(object):
                 chosen_segments[len(chosen_segments) - 1][-1]
             )
             chosen_segments.append(segment)
+
+            # Determine whether to keep going. Chance of stopping is 0% before min_segments,
+            # increasing linearly to 35% at average_segments, then to 100% at max_segments.
+            cur_length = len(chosen_segments)
+            stop_chance = 0
+            if cur_length >= self.max_segments:
+                stop_chance = 1
+            elif cur_length >= self.average_segments:
+                t = (cur_length - self.average_segments) / (self.max_segments - self.average_segments)
+                stop_chance = lerp(0.35, 1, t)
+            elif cur_length >= self.min_segments:
+                t = (cur_length - self.min_segments) / (self.average_segments - self.min_segments)
+                stop_chance = lerp(0, 0.35, t)
+            stop_roll = random()
+            # print(f"Stop chance is {stop_chance} and stop roll is {stop_roll}.")
+            gen_segments = stop_roll > stop_chance
         generated_name = Name(chosen_segments)
         return generated_name
 
     def mark_name(self, name: Name, good: bool) -> None:
         p_modifier = 1.01 if good else 0.99
+
+        # Modify average length to be 5% closer to the length of this name if good,
+        # do the opposite if bad.
+        distance = len(name.segments) - self.average_segments
+        if good:
+            # Using addition and subtraction should be fine since distance is not absolute.
+            self.average_segments += distance * 0.05
+        else:
+            self.average_segments -= distance * 0.05
 
         # Modify opener probability
         self.openers[name.segments[0]] *= p_modifier
