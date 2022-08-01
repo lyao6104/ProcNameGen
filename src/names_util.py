@@ -111,7 +111,7 @@ def scan_names(
         language_name,
         [segment_type],
         openers,
-        round(len(min(names, key=len)) * 0.8),
+        round(len(min(names, key=len)) * 1.2),
         round(len(max(names, key=len)) * 0.8),
     )
-    save_language(input("Enter location to save language: "), new_lang)
+    return new_lang
