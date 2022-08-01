@@ -122,7 +122,7 @@ class Language(object):
                 p=self.probabilities,
             )[0]
             segment = segment_type.get_segment(
-                chosen_segments[len(chosen_segments) - 1]
+                chosen_segments[len(chosen_segments) - 1][-1]
             )
             chosen_segments.append(segment)
         generated_name = Name(chosen_segments)

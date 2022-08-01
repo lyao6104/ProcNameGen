@@ -69,3 +69,49 @@ def train_language(language_path: str):
         # Decrease probability of bad segments
         else:
             language.mark_name(generated_name, False)
+
+
+def scan_names(
+    names_path: str, order: int = 2, language_name: str = "New Language"
+) -> Language:
+    names = []
+    with open(names_path, "r") as file:
+        names = file.readlines()
+        names = list(map(lambda name: name.strip(), names))
+    segments = {}
+    openers = {}
+    for name in names:
+        if name[0].lower() in openers:
+            openers[name[0].lower()] += 1
+        else:
+            openers[name[0].lower()] = 1
+        for i in range(1, order + 1):
+            for j in range(0, len(name)):
+                if j + i > len(name):
+                    continue
+                cur_segment = name[j].lower()
+                if cur_segment not in segments:
+                    segments[cur_segment] = []
+
+                next_segment = name[j + 1 : j + 1 + i].lower()
+                if not next_segment:
+                    continue
+
+                contains_next = False
+                for k, (key, p) in enumerate(segments[cur_segment]):
+                    if key == next_segment:
+                        segments[cur_segment][k] = (key, p + 1)
+                        contains_next = True
+                        break
+                if not contains_next:
+                    segments[cur_segment].append((next_segment, 1))
+
+    segment_type = SegmentType("Base Segment", 1, segments)
+    new_lang = Language(
+        language_name,
+        [segment_type],
+        openers,
+        round(len(min(names, key=len)) * 0.8),
+        round(len(max(names, key=len)) * 0.8),
+    )
+    save_language(input("Enter location to save language: "), new_lang)
