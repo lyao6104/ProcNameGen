@@ -1,7 +1,3 @@
-import numpy.linalg as linalg
-from numpy.typing import ArrayLike
-
-
 def normalize_sum(xs):
     """
     Normalizes a list to sum to 1.0

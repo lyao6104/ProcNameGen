@@ -1,9 +1,8 @@
 import json
 import string
 from functools import cached_property
-from random import randint, random
+from random import random
 from typing import Dict, List, Optional, Tuple
-from urllib.request import ProxyBasicAuthHandler
 
 from numpy.random import choice
 

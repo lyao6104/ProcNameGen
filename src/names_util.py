@@ -1,5 +1,4 @@
 import json
-from math import log
 from os import walk
 from typing import Dict
 
