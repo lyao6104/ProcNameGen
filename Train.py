@@ -7,6 +7,8 @@ root = tk.Tk()
 root.withdraw()
 
 language_path = filedialog.askopenfilename(
-    title="Please select the language file.", filetypes=[("Language files", "json")], initialdir="."
+    title="Please select the language file.",
+    filetypes=[("Language files", "json")],
+    initialdir=".",
 )
 train_language(language_path)

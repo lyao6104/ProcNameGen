@@ -119,8 +119,8 @@ class Language(object):
         ]
         gen_segments = True
         while gen_segments:
-        # num_segments = randint(self.min_segments, self.max_segments)
-        # for _ in range(1, num_segments):
+            # num_segments = randint(self.min_segments, self.max_segments)
+            # for _ in range(1, num_segments):
             # Choose the next segment and add it to the list
             segment_type = choice(
                 self.segment_types,
@@ -139,10 +139,14 @@ class Language(object):
             if cur_length >= self.max_segments:
                 stop_chance = 1
             elif cur_length >= self.average_segments:
-                t = (cur_length - self.average_segments) / (self.max_segments - self.average_segments)
+                t = (cur_length - self.average_segments) / (
+                    self.max_segments - self.average_segments
+                )
                 stop_chance = lerp(0.35, 1, t)
             elif cur_length >= self.min_segments:
-                t = (cur_length - self.min_segments) / (self.average_segments - self.min_segments)
+                t = (cur_length - self.min_segments) / (
+                    self.average_segments - self.min_segments
+                )
                 stop_chance = lerp(0, 0.35, t)
             stop_roll = random()
             # print(f"Stop chance is {stop_chance} and stop roll is {stop_roll}.")
