@@ -6,7 +6,7 @@ from .names import *
 
 
 def load_language(path: str) -> Language:
-    with open(path, "r") as file:
+    with open(path, "r", encoding="utf-8") as file:
         language_dict = json.loads(file.read())
         return Language(
             language_dict["name"],
@@ -27,7 +27,7 @@ def load_language(path: str) -> Language:
 def save_language(path: str, language: Language, overwrite: bool = False) -> None:
     # First open the given path in read mode to see if it already exists.
     try:
-        with open(path, "x") as _:
+        with open(path, "x", encoding="utf-8") as _:
             pass
     except FileExistsError:
         if not overwrite:
@@ -36,7 +36,7 @@ def save_language(path: str, language: Language, overwrite: bool = False) -> Non
             )
             return
 
-    with open(path, "w") as file:
+    with open(path, "w", encoding="utf-8") as file:
         file.write(language.to_json(pretty=True))
 
 
@@ -45,7 +45,7 @@ def get_saved_languages(languages_path: str) -> Dict[str, str]:
     for (dir_path, _, file_names) in walk(languages_path):
         for file_name in file_names:
             language_path = f"{dir_path}/{file_name}"
-            with open(language_path, "r") as language_file:
+            with open(language_path, "r", encoding="utf-8") as language_file:
                 language_name = json.loads(language_file.read())["name"]
                 languages[language_name] = language_path
     return languages
@@ -74,7 +74,7 @@ def scan_names(
     names_path: str, order: int = 2, language_name: str = "New Language"
 ) -> Language:
     names = []
-    with open(names_path, "r") as file:
+    with open(names_path, "r", encoding="utf-8") as file:
         names = file.readlines()
         names = list(map(lambda name: name.strip(), names))
     segments = {}

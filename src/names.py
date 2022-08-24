@@ -134,7 +134,9 @@ class Language(object):
 
             # Determine whether to keep going. Chance of stopping is 0% before min_segments,
             # increasing linearly to 35% at average_segments, then to 100% at max_segments.
-            cur_length = len(chosen_segments)
+            # As of August 18, 2022, "segment length" is actually just number of letters now.
+            # Names were kept the same for backwards compatibility.
+            cur_length = sum(map(lambda x: len(x), chosen_segments))
             stop_chance = 0
             if cur_length >= self.max_segments:
                 stop_chance = 1
