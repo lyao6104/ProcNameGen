@@ -57,6 +57,9 @@ class SegmentType(object):
             p=list(map(lambda segment: segment[1], self.segments[current_segment])),
         )[0]
 
+    def segment_is_terminal(self, current_segment: str) -> bool:
+        return not bool(self.segments[current_segment])
+
     def normalize_segment_probabilities(self):
         for current_segment in self.segments.keys():
             segment_probabilities = normalize_sum(
@@ -138,7 +141,9 @@ class Language(object):
             # Names were kept the same for backwards compatibility.
             cur_length = sum(map(lambda x: len(x), chosen_segments))
             stop_chance = 0
-            if cur_length >= self.max_segments:
+            if cur_length >= self.max_segments or segment_type.segment_is_terminal(
+                segment[len(segment) - 1 :]
+            ):
                 stop_chance = 1
             elif cur_length >= self.average_segments:
                 t = (cur_length - self.average_segments) / (

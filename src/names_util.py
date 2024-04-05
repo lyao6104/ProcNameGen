@@ -42,7 +42,7 @@ def save_language(path: str, language: Language, overwrite: bool = False) -> Non
 
 def get_saved_languages(languages_path: str) -> Dict[str, str]:
     languages = {}
-    for (dir_path, _, file_names) in walk(languages_path):
+    for dir_path, _, file_names in walk(languages_path):
         for file_name in file_names:
             language_path = f"{dir_path}/{file_name}"
             with open(language_path, "r", encoding="utf-8") as language_file:
